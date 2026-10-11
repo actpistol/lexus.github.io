@@ -16,7 +16,7 @@
             font-family: 'Inter', sans-serif;
         }
         .table-container {
-            max-height: 600px;
+            max-height: 580px;
             overflow-x: auto;
             overflow-y: auto;
             position: relative;
@@ -53,7 +53,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-slate-900">Asset Tracking System</h1>
-                    <p class="text-xs text-slate-500">Track current & replaced asset history with Excel synchronization</p>
+                    <p class="text-xs text-slate-500">Track current & replaced asset history with real-time UI reactivity</p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -171,12 +171,13 @@
             </div>
             <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
                 <span id="tableRecordCount">Showing 0 entries</span>
-                <span class="italic text-slate-400">Columns: 12 Default Fields + Replaced Asset Info Field</span>
+                <span class="italic text-slate-400">13 Columns Synchronized</span>
             </div>
         </div>
 
     </main>
 
+    <!-- Modal Form -->
     <div id="assetModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full border border-slate-200 overflow-hidden my-8">
             <div class="bg-amber-400 px-6 py-4 flex items-center justify-between text-slate-900">
@@ -198,7 +199,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
-                    <input type="text" id="category" required placeholder="e.g. Mobile, Laptop, Desktop" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                    <input type="text" id="category" required placeholder="e.g. Mobile, Laptop" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Title</label>
@@ -214,7 +215,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Asset Handover Form</label>
-                    <input type="text" id="assetHandoverForm" placeholder="e.g. Available, Legal, Not Yet Assigned" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                    <input type="text" id="assetHandoverForm" placeholder="e.g. Available, Legal" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Product Acquisition Number</label>
@@ -240,12 +241,12 @@
                     <label class="block text-xs font-bold text-indigo-900 mb-1">
                         <i class="fa-solid fa-arrows-rotate mr-1 text-indigo-600"></i> Replaced Asset Details / Old Asset Info
                     </label>
-                    <input type="text" id="replacedAssetInfo" placeholder="e.g. Replaced PRPL/LAP/1102 (S/N: SG5YV7HXMX9) or Old HP Elitebook" class="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none bg-white">
-                    <p class="text-[11px] text-indigo-600 mt-1">Fill this field if this asset replaced another laptop/device or if this device was replaced by another system.</p>
+                    <input type="text" id="replacedAssetInfo" placeholder="e.g. Replaced PRPL/LAP/1102 (S/N: SG5YV7HXMX9)" class="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none bg-white">
+                    <p class="text-[11px] text-indigo-600 mt-1">Record the replaced laptop or device info here.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Comment</label>
-                    <input type="text" id="comment" placeholder="e.g. #N/A, Battery issue, Upgraded" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                    <input type="text" id="comment" placeholder="e.g. #N/A, Battery issue" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Date of Purchase</label>
@@ -273,7 +274,6 @@
     </div>
 
     <script>
-        // Default Mock Data based on user Excel format with Replaced Asset Info
         const defaultAssets = [
             {
                 srNo: 643,
@@ -355,29 +355,33 @@
         let assets = [];
 
         window.onload = function() {
-            const savedData = localStorage.getItem('excel_asset_tracking_data_v2');
+            loadFromLocalStorage();
+            populateFilters();
+            filterAssets();
+        };
+
+        function loadFromLocalStorage() {
+            const savedData = localStorage.getItem('excel_asset_tracking_data_v3');
             if (savedData) {
                 try {
                     assets = JSON.parse(savedData);
                 } catch(e) {
-                    assets = defaultAssets;
+                    assets = [...defaultAssets];
                 }
             } else {
-                assets = defaultAssets;
+                assets = [...defaultAssets];
             }
-            populateFilters();
-            renderTable(assets);
-        };
+        }
 
         function saveToLocalStorage() {
-            localStorage.setItem('excel_asset_tracking_data_v2', JSON.stringify(assets));
+            localStorage.setItem('excel_asset_tracking_data_v3', JSON.stringify(assets));
         }
 
         function resetDataToDefault() {
             assets = [...defaultAssets];
             saveToLocalStorage();
             populateFilters();
-            renderTable(assets);
+            filterAssets();
             showNotification("Reset Complete", "Data restored to default sample records.", "success");
         }
 
@@ -430,10 +434,10 @@
                     <td class="p-3 border-r border-slate-200 text-slate-600">${escapeHtml(item.dateOfPurchase)}</td>
                     <td class="p-3 text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="editAsset(${index})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
+                            <button onclick="editAssetBySystemId('${item.systemId}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button onclick="deleteAsset(${index})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition" title="Delete">
+                            <button onclick="deleteAssetBySystemId('${item.systemId}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition" title="Delete">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -447,16 +451,19 @@
         }
 
         function updateStats(currentData) {
-            document.getElementById('statTotal').innerText = currentData.length;
-            document.getElementById('statWorking').innerText = currentData.filter(i => (i.status || '').toLowerCase() === 'working').length;
-            document.getElementById('statReplaced').innerText = currentData.filter(i => (i.status || '').toLowerCase() === 'replaced').length;
-            document.getElementById('statStock').innerText = currentData.filter(i => (i.status || '').toLowerCase().includes('stock') || (i.status || '').toLowerCase().includes('available')).length;
-            document.getElementById('statNotWorking').innerText = currentData.filter(i => (i.status || '').toLowerCase() === 'not working').length;
+            document.getElementById('statTotal').innerText = assets.length;
+            document.getElementById('statWorking').innerText = assets.filter(i => (i.status || '').toLowerCase() === 'working').length;
+            document.getElementById('statReplaced').innerText = assets.filter(i => (i.status || '').toLowerCase() === 'replaced').length;
+            document.getElementById('statStock').innerText = assets.filter(i => (i.status || '').toLowerCase().includes('stock') || (i.status || '').toLowerCase().includes('available')).length;
+            document.getElementById('statNotWorking').innerText = assets.filter(i => (i.status || '').toLowerCase() === 'not working').length;
         }
 
         function populateFilters() {
             const catFilter = document.getElementById('categoryFilter');
             const statFilter = document.getElementById('statusFilter');
+
+            const currentCatVal = catFilter.value;
+            const currentStatVal = statFilter.value;
 
             const categories = [...new Set(assets.map(i => i.category).filter(Boolean))];
             const statuses = [...new Set(assets.map(i => i.status).filter(Boolean))];
@@ -464,6 +471,9 @@
 
             catFilter.innerHTML = `<option value="">All Categories</option>` + categories.map(c => `<option value="${c}">${c}</option>`).join('');
             statFilter.innerHTML = `<option value="">All Statuses</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            catFilter.value = currentCatVal;
+            statFilter.value = currentStatVal;
         }
 
         function filterAssets() {
@@ -481,23 +491,24 @@
             renderTable(filtered);
         }
 
-        function openModal(isEdit = false) {
+        function openModal() {
             document.getElementById('assetModal').classList.remove('hidden');
-            if (!isEdit) {
-                document.getElementById('modalTitle').innerText = "Add New Asset Record";
-                document.getElementById('assetForm').reset();
-                document.getElementById('editIndex').value = "";
-                document.getElementById('srNo').value = assets.length > 0 ? Math.max(...assets.map(a => a.srNo || 0)) + 1 : 1;
-                document.getElementById('status').value = "Working";
-            }
+            document.getElementById('modalTitle').innerText = "Add New Asset Record";
+            document.getElementById('assetForm').reset();
+            document.getElementById('editIndex').value = "";
+            document.getElementById('srNo').value = assets.length > 0 ? Math.max(...assets.map(a => a.srNo || 0)) + 1 : 1;
+            document.getElementById('status').value = "Working";
         }
 
         function closeModal() {
             document.getElementById('assetModal').classList.add('hidden');
         }
 
-        function editAsset(index) {
+        function editAssetBySystemId(sysId) {
+            const index = assets.findIndex(a => a.systemId === sysId);
+            if (index === -1) return;
             const item = assets[index];
+
             document.getElementById('modalTitle').innerText = "Edit Asset Record";
             document.getElementById('editIndex').value = index;
             document.getElementById('srNo').value = item.srNo || (index + 1);
@@ -514,7 +525,7 @@
             document.getElementById('comment').value = item.comment || '';
             document.getElementById('dateOfPurchase').value = item.dateOfPurchase || '';
 
-            openModal(true);
+            document.getElementById('assetModal').classList.remove('hidden');
         }
 
         function saveAsset(e) {
@@ -537,8 +548,8 @@
                 dateOfPurchase: document.getElementById('dateOfPurchase').value.trim() || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
             };
 
-            if (editIndex !== "") {
-                assets[editIndex] = assetObj;
+            if (editIndex !== "" && !isNaN(editIndex)) {
+                assets[parseInt(editIndex)] = assetObj;
                 showNotification("Success", "Asset record updated successfully.", "success");
             } else {
                 assets.push(assetObj);
@@ -551,13 +562,13 @@
             closeModal();
         }
 
-        function deleteAsset(index) {
-            if (confirm("Are you sure you want to delete this asset record?")) {
-                assets.splice(index, 1);
+        function deleteAssetBySystemId(sysId) {
+            if (confirm(`Are you sure you want to delete asset "${sysId}"?`)) {
+                assets = assets.filter(a => a.systemId !== sysId);
                 saveToLocalStorage();
                 populateFilters();
                 filterAssets();
-                showNotification("Deleted", "Asset record removed.", "info");
+                showNotification("Deleted", "Asset record removed successfully.", "info");
             }
         }
 
@@ -618,14 +629,14 @@
                         assets = newImportedAssets;
                         saveToLocalStorage();
                         populateFilters();
-                        renderTable(assets);
-                        showNotification("Import Successful", `Loaded ${newImportedAssets.length} asset records with replaced details.`, "success");
+                        filterAssets();
+                        showNotification("Import Successful", `Loaded ${newImportedAssets.length} asset records instantly.`, "success");
                     } else {
                         showNotification("Import Warning", "No valid records found in file.", "warning");
                     }
                 } catch(err) {
                     console.error(err);
-                    showNotification("Import Error", "Failed to parse Excel file. Please check format.", "error");
+                    showNotification("Import Error", "Failed to parse Excel file.", "error");
                 }
                 event.target.value = "";
             };
@@ -652,8 +663,8 @@
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Asset Tracking");
-            XLSX.writeFile(workbook, "Asset_Tracking_System_Replaced_Info.xlsx");
-            showNotification("Export Complete", "Excel file exported with Replaced Asset details.", "success");
+            XLSX.writeFile(workbook, "Asset_Tracking_System_Export.xlsx");
+            showNotification("Export Complete", "Excel file exported successfully.", "success");
         }
 
         function showNotification(title, message, type = 'info') {
