@@ -11,7 +11,6 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Custom scrollbar and sticky header refinements */
         .table-container {
             max-height: calc(100vh - 280px);
             overflow-y: auto;
@@ -21,7 +20,7 @@
             position: sticky;
             top: 0;
             z-index: 20;
-            background-color: #ffd700 !important; /* Exact yellow header bar */
+            background-color: #ffd700 !important;
             color: #000000;
             box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
         }
@@ -37,14 +36,17 @@
 
     <!-- Top Navbar -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+        <div class="max-w-[100rem] mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
                 <div class="bg-yellow-400 text-slate-900 p-2 rounded-lg font-bold shadow">
                     <i class="fa-solid fa-laptop text-xl"></i>
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight">IT Asset Tracking System</h1>
-                    <p class="text-xs text-slate-400">Inventory & Lifecycle Management</p>
+                    <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 
+                        GitHub Master Excel Workflow Active
+                    </p>
                 </div>
             </div>
 
@@ -53,12 +55,12 @@
                 <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer">
                     <i class="fa-solid fa-plus"></i> Add Asset
                 </button>
-                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer flex items-center gap-2">
-                    <i class="fa-solid fa-file-excel"></i> Import Excel
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer flex items-center gap-2" title="Upload master IT_Asset_Inventory.xlsx">
+                    <i class="fa-solid fa-file-excel"></i> Import Master Excel
                     <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelImport(event)">
                 </label>
-                <button onclick="exportToExcel()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer">
-                    <i class="fa-solid fa-download"></i> Export Excel
+                <button onclick="exportToExcel()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer" title="Download updated master Excel to commit to GitHub">
+                    <i class="fa-solid fa-download"></i> Export & Update GitHub
                 </button>
                 <button onclick="confirmClearData()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer" title="Clear All Data">
                     <i class="fa-solid fa-trash-can"></i>
@@ -69,6 +71,15 @@
 
     <!-- Main Container -->
     <main class="flex-1 max-w-[100rem] w-full mx-auto p-4 flex flex-col gap-4">
+
+        <!-- GitHub Workflow Helper Banner -->
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+            <div class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-info text-amber-600 text-base"></i>
+                <span><strong>GitHub Pages Workflow:</strong> To sync data across devices, import your master Excel file when switching devices, and click <strong>Export & Update GitHub</strong> after making changes to download the file for your repository commit.</span>
+            </div>
+            <button onclick="dismissBanner(this)" class="text-amber-700 hover:text-amber-900 font-bold px-2 py-1"><i class="fa-solid fa-xmark"></i></button>
+        </div>
 
         <!-- Stats Overview Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -119,7 +130,6 @@
         <!-- Filters & Search Toolbar -->
         <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-3 flex-1">
-                <!-- Search Input -->
                 <div class="relative min-w-[240px] flex-1 sm:flex-none">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                         <i class="fa-solid fa-magnifying-glass"></i>
@@ -127,12 +137,10 @@
                     <input type="text" id="searchInput" oninput="filterAssets()" placeholder="Search System ID, Serial, Emp Name..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
 
-                <!-- Category Filter -->
                 <select id="filterCategory" onchange="filterAssets()" class="py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="">All Categories</option>
                 </select>
 
-                <!-- Status Filter -->
                 <select id="filterStatus" onchange="filterAssets()" class="py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="">All Statuses</option>
                     <option value="Working">Working</option>
@@ -146,7 +154,6 @@
                 </select>
             </div>
 
-            <!-- Reset & Count -->
             <div class="flex items-center gap-3">
                 <span id="recordCount" class="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">Showing 0 entries</span>
                 <button onclick="resetFilters()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer">
@@ -178,7 +185,7 @@
                         </tr>
                     </thead>
                     <tbody id="assetTableBody" class="divide-y divide-slate-200 text-slate-700">
-                        <!-- Populated dynamically via JavaScript -->
+                        <!-- Populated dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -281,16 +288,11 @@
     <script>
         let assets = [];
 
-        // Sample initial demo data if localStorage is empty
         const defaultDemoData = [
             { systemID: "PRPL/MOB/2917", category: "Mobile", title: "PRPL 01 APPLE IPHONE MOBILE", serialNumber: "SG5YV7HXMX9", empName: "Durgesh Gopal Ozarkar", handover: "Available", acquisition: "PRPL/ACQ/24112023/00347", invoice: "PATNI23-24/27376", status: "Working", replacedInfo: "", comment: "#N/A", datePurchase: "24-Nov-23" },
-            { systemID: "PRPL/MOB/3434", category: "Mobile", title: "PRPL 02 REDMI MOBILE", serialNumber: "862098077440783", empName: "Aniket Dhanraj Bamnote", handover: "Available", acquisition: "PRPL/ACQ / 10042024 / 361", invoice: "BOM7-11121", status: "Working", replacedInfo: "", comment: "#N/A", datePurchase: "10-Apr-24" },
-            { systemID: "PRPL/MOB/3435", category: "Mobile", title: "PRPL 03 REDMI MOBILE", serialNumber: "868511065789130", empName: "Stock in Turbhe office", handover: "Not Yet Assigned", acquisition: "PRPL/ACQ / 23052024 / 360", invoice: "TF/24-25/265", status: "Not Working", replacedInfo: "", comment: "Battery issue", datePurchase: "23-May-24" },
-            { systemID: "PRPL/MOB/3443", category: "Mobile", title: "PRPL 11 REDMI MOBILE", serialNumber: "862098077657683", empName: "Legal Case Done", handover: "Legal", acquisition: "PRPL/ACQ / 23052024 / 360", invoice: "TF/24-25/265", status: "Legal", replacedInfo: "", comment: "#N/A", datePurchase: "23-May-24" },
-            { systemID: "PRPL/MOB/3516", category: "Mobile", title: "PRPL 14 SAMSUNG MOBILE", serialNumber: "350835038557992", empName: "Sangeetha Sekar", handover: "Available", acquisition: "PRPL/ACQ / 01082024 / 364", invoice: "TF/24-25/649", status: "Working", replacedInfo: "", comment: "#N/A", datePurchase: "01-Aug-24" }
+            { systemID: "PRPL/MOB/3434", category: "Mobile", title: "PRPL 02 REDMI MOBILE", serialNumber: "862098077440783", empName: "Aniket Dhanraj Bamnote", handover: "Available", acquisition: "PRPL/ACQ / 10042024 / 361", invoice: "BOM7-11121", status: "Working", replacedInfo: "", comment: "#N/A", datePurchase: "10-Apr-24" }
         ];
 
-        // Load data on startup
         window.addEventListener('DOMContentLoaded', () => {
             const stored = localStorage.getItem('it_assets_inventory');
             if (stored) {
@@ -309,6 +311,10 @@
 
         function saveToStorage() {
             localStorage.setItem('it_assets_inventory', JSON.stringify(assets));
+        }
+
+        function dismissBanner(btn) {
+            btn.closest('div').remove();
         }
 
         function excelSerialToDate(serial) {
@@ -421,10 +427,8 @@
             });
         }
 
-        // Fixed modal opening function: properly distinguishes between adding a new asset and editing
         function openModal(index = null) {
             document.getElementById('assetModal').classList.remove('hidden');
-            
             if (index !== null && index !== undefined && index !== '') {
                 document.getElementById('modalTitleText').innerText = 'Edit Asset Record';
                 document.getElementById('editIndex').value = index;
@@ -473,10 +477,8 @@
             };
 
             if (index !== '' && index !== null && index !== undefined) {
-                // Update existing record
                 assets[parseInt(index, 10)] = assetObj;
             } else {
-                // Add new record
                 assets.unshift(assetObj);
             }
 
