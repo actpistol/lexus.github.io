@@ -6,7 +6,7 @@
     <title>Enterprise IT Asset Tracking System</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- SheetJS (xlsx) for Excel Import/Export -->
+    <!-- SheetJS (xlsx) for Excel Import/Export/Fetch -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,7 +20,7 @@
             position: sticky;
             top: 0;
             z-index: 20;
-            background-color: #ffd700 !important;
+            background-color: #ffd700 !important; /* Fixed Sticky Yellow Header Bar */
             color: #000000;
             box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
         }
@@ -43,9 +43,9 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight">IT Asset Tracking System</h1>
-                    <p class="text-xs text-slate-400 flex items-center gap-1.5">
-                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 
-                        GitHub Master Excel Workflow Active
+                    <p class="text-xs text-slate-400 flex items-center gap-1.5" id="syncStatus">
+                        <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> 
+                        Loading IT_Asset_Inventory.xlsx from GitHub...
                     </p>
                 </div>
             </div>
@@ -55,14 +55,17 @@
                 <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer">
                     <i class="fa-solid fa-plus"></i> Add Asset
                 </button>
-                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer flex items-center gap-2" title="Upload master IT_Asset_Inventory.xlsx">
-                    <i class="fa-solid fa-file-excel"></i> Import Master Excel
+                <button onclick="loadFromGitHubRepo(true)" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer" title="Reload fresh data from GitHub Excel">
+                    <i class="fa-solid fa-arrows-rotate"></i> Reload GitHub Excel
+                </button>
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer flex items-center gap-2" title="Upload local Excel file">
+                    <i class="fa-solid fa-file-excel"></i> Import Excel
                     <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelImport(event)">
                 </label>
-                <button onclick="exportToExcel()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer" title="Download updated master Excel to commit to GitHub">
-                    <i class="fa-solid fa-download"></i> Export & Update GitHub
+                <button onclick="exportToExcel()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow transition flex items-center gap-2 cursor-pointer" title="Export updated Excel to upload to GitHub">
+                    <i class="fa-solid fa-download"></i> Export Excel
                 </button>
-                <button onclick="confirmClearData()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer" title="Clear All Data">
+                <button onclick="confirmClearData()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow transition cursor-pointer" title="Clear Data">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
@@ -72,13 +75,13 @@
     <!-- Main Container -->
     <main class="flex-1 max-w-[100rem] w-full mx-auto p-4 flex flex-col gap-4">
 
-        <!-- GitHub Workflow Helper Banner -->
-        <div class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
-            <div class="flex items-center gap-2.5">
-                <i class="fa-solid fa-circle-info text-amber-600 text-base"></i>
-                <span><strong>GitHub Pages Workflow:</strong> To sync data across devices, import your master Excel file when switching devices, and click <strong>Export & Update GitHub</strong> after making changes to download the file for your repository commit.</span>
+        <!-- Info Notification Bar -->
+        <div id="statusBanner" class="bg-indigo-50 border border-indigo-200 text-indigo-900 px-4 py-2.5 rounded-xl shadow-xs flex items-center justify-between gap-3 text-xs sm:text-sm">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-cloud-arrow-down text-indigo-600 text-base"></i>
+                <span id="bannerMessage">Auto-fetching <strong>IT_Asset_Inventory.xlsx</strong> from GitHub repository...</span>
             </div>
-            <button onclick="dismissBanner(this)" class="text-amber-700 hover:text-amber-900 font-bold px-2 py-1"><i class="fa-solid fa-xmark"></i></button>
+            <button onclick="this.parentElement.remove()" class="text-indigo-700 hover:text-indigo-900 font-bold px-2"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
         <!-- Stats Overview Cards -->
@@ -185,7 +188,7 @@
                         </tr>
                     </thead>
                     <tbody id="assetTableBody" class="divide-y divide-slate-200 text-slate-700">
-                        <!-- Populated dynamically -->
+                        <!-- Table rows generated dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -284,37 +287,91 @@
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
+    <!-- Application Logic -->
     <script>
         let assets = [];
-
-        const defaultDemoData = [
-            { systemID: "PRPL/MOB/2917", category: "Mobile", title: "PRPL 01 APPLE IPHONE MOBILE", serialNumber: "SG5YV7HXMX9", empName: "Durgesh Gopal Ozarkar", handover: "Available", acquisition: "PRPL/ACQ/24112023/00347", invoice: "PATNI23-24/27376", status: "Working", replacedInfo: "", comment: "#N/A", datePurchase: "24-Nov-23" },
-            { systemID: "PRPL/MOB/3434", category: "Mobile", title: "PRPL 02 REDMI MOBILE", serialNumber: "862098077440783", empName: "Aniket Dhanraj Bamnote", handover: "Available", acquisition: "PRPL/ACQ / 10042024 / 361", invoice: "BOM7-11121", status: "Working", replacedInfo: "", comment: "#N/A", datePurchase: "10-Apr-24" }
-        ];
+        // Exact filename present in your GitHub repository root
+        const EXCEL_GITHUB_URL = './IT_Asset_Inventory.xlsx';
 
         window.addEventListener('DOMContentLoaded', () => {
-            const stored = localStorage.getItem('it_assets_inventory');
-            if (stored) {
-                try {
-                    assets = JSON.parse(stored);
-                } catch(e) {
-                    assets = defaultDemoData;
-                }
-            } else {
-                assets = defaultDemoData;
-                saveToStorage();
-            }
-            populateCategoryDropdown();
-            filterAssets();
+            loadFromGitHubRepo();
         });
 
-        function saveToStorage() {
-            localStorage.setItem('it_assets_inventory', JSON.stringify(assets));
+        // Auto-fetch Excel file directly from GitHub repository on page load
+        async function loadFromGitHubRepo(showToast = false) {
+            const statusEl = document.getElementById('syncStatus');
+            const bannerEl = document.getElementById('bannerMessage');
+
+            try {
+                if (statusEl) statusEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Fetching IT_Asset_Inventory.xlsx...`;
+                
+                // Add timestamp query parameter to bypass browser caching when reloaded
+                const response = await fetch(`${EXCEL_GITHUB_URL}?t=${Date.now()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: Unable to locate IT_Asset_Inventory.xlsx`);
+                }
+
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                if (jsonRows.length > 0) {
+                    assets = parseExcelRows(jsonRows);
+                    saveToStorage();
+                    populateCategoryDropdown();
+                    filterAssets();
+
+                    if (statusEl) statusEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> Synced with GitHub Excel (${assets.length} items)`;
+                    if (bannerEl) bannerEl.innerHTML = `Loaded <strong>${assets.length} records</strong> directly from <strong>IT_Asset_Inventory.xlsx</strong> in your GitHub repository!`;
+                    if (showToast) alert(`Successfully reloaded ${assets.length} records from GitHub Excel file!`);
+                } else {
+                    throw new Error("GitHub Excel file is empty.");
+                }
+            } catch (error) {
+                console.warn("GitHub Excel Fetch Error, falling back to Local Storage:", error);
+                if (statusEl) statusEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-400"></span> Using Local Storage (GitHub Fetch Pending)`;
+                
+                // Fallback to local storage if network or file missing
+                const stored = localStorage.getItem('it_assets_inventory');
+                if (stored) {
+                    try { assets = JSON.parse(stored); } catch(e) { assets = []; }
+                }
+                populateCategoryDropdown();
+                filterAssets();
+            }
         }
 
-        function dismissBanner(btn) {
-            btn.closest('div').remove();
+        function parseExcelRows(jsonRows) {
+            return jsonRows.map(row => {
+                const getVal = (keys) => {
+                    for (let k of keys) {
+                        const foundKey = Object.keys(row).find(rk => rk.toLowerCase().trim() === k.toLowerCase());
+                        if (foundKey !== undefined) return row[foundKey];
+                    }
+                    return "";
+                };
+
+                const rawDate = getVal(["Date of Purchase", "Date of Purcha", "Purchase Date", "Date"]);
+                const formattedDate = !isNaN(rawDate) && String(rawDate).trim() !== "" ? excelSerialToDate(rawDate) : String(rawDate);
+
+                return {
+                    systemID: String(getVal(["System ID", "SystemID", "ID"])),
+                    category: String(getVal(["Category", "Cat"])),
+                    title: String(getVal(["Title", "Model", "Item Name"])),
+                    serialNumber: String(getVal(["Serial Number", "Serial No", "Serial"])),
+                    empName: String(getVal(["Emp Name", "Employee Name", "User"])),
+                    handover: String(getVal(["Asset Handover Form", "Handover", "Form"])),
+                    acquisition: String(getVal(["Product Acquisition Number", "Acquisition Number", "Acquisition"])),
+                    invoice: String(getVal(["Invoice Number", "Invoice No", "Invoice"])),
+                    status: String(getVal(["Status"])) || "Working",
+                    replacedInfo: String(getVal(["Replaced Asset Info", "Replaced Info", "Replacement"])),
+                    comment: String(getVal(["Comment", "Remarks", "Note"])) || "#N/A",
+                    datePurchase: formattedDate
+                };
+            });
         }
 
         function excelSerialToDate(serial) {
@@ -329,6 +386,10 @@
             const month = months[dateObj.getUTCMonth()];
             const year = String(dateObj.getUTCFullYear()).slice(-2);
             return `${day}-${month}-${year}`;
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('it_assets_inventory', JSON.stringify(assets));
         }
 
         function populateCategoryDropdown() {
@@ -535,6 +596,8 @@
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Asset Inventory");
+            
+            // Name export exactly as IT_Asset_Inventory.xlsx to directly replace it in your repository
             XLSX.writeFile(workbook, "IT_Asset_Inventory.xlsx");
         }
 
@@ -556,35 +619,9 @@
                         return;
                     }
 
-                    const importedAssets = jsonRows.map(row => {
-                        const getVal = (keys) => {
-                            for (let k of keys) {
-                                const foundKey = Object.keys(row).find(rk => rk.toLowerCase().trim() === k.toLowerCase());
-                                if (foundKey !== undefined) return row[foundKey];
-                            }
-                            return "";
-                        };
+                    const importedAssets = parseExcelRows(jsonRows);
 
-                        const rawDate = getVal(["Date of Purchase", "Date of Purcha", "Purchase Date", "Date"]);
-                        const formattedDate = !isNaN(rawDate) && String(rawDate).trim() !== "" ? excelSerialToDate(rawDate) : String(rawDate);
-
-                        return {
-                            systemID: String(getVal(["System ID", "SystemID", "ID"])),
-                            category: String(getVal(["Category", "Cat"])),
-                            title: String(getVal(["Title", "Model", "Item Name"])),
-                            serialNumber: String(getVal(["Serial Number", "Serial No", "Serial"])),
-                            empName: String(getVal(["Emp Name", "Employee Name", "User"])),
-                            handover: String(getVal(["Asset Handover Form", "Handover", "Form"])),
-                            acquisition: String(getVal(["Product Acquisition Number", "Acquisition Number", "Acquisition"])),
-                            invoice: String(getVal(["Invoice Number", "Invoice No", "Invoice"])),
-                            status: String(getVal(["Status"])) || "Working",
-                            replacedInfo: String(getVal(["Replaced Asset Info", "Replaced Info", "Replacement"])),
-                            comment: String(getVal(["Comment", "Remarks", "Note"])) || "#N/A",
-                            datePurchase: formattedDate
-                        };
-                    });
-
-                    if (confirm(`Successfully read ${importedAssets.length} asset records from Excel. Click OK to replace current inventory or Cancel to merge.`)) {
+                    if (confirm(`Successfully read ${importedAssets.length} asset records from local file. Click OK to replace current view or Cancel to merge.`)) {
                         assets = importedAssets;
                     } else {
                         assets = [...importedAssets, ...assets];
